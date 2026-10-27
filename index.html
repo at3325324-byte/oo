@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الفيديو المحمي</title>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9eeee;--panel:#ffffffcc;--ink:#10292b;--muted:#587072;--line:#c3d1d0;--accent:#a8650f;--ok:#23794a;--err:#b3382c;--video:#0a1c1d;--ring:#9db3b2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a1a1c;--panel:#12292bcc;--ink:#e6efec;--muted:#8fa9a6;--line:#27494b;--accent:#f0aa3f;--ok:#6fd49b;--err:#ff8f80;--video:#061213;--ring:#2f5558}}
+:root[data-theme="dark"]{--bg:#0a1a1c;--panel:#12292bcc;--ink:#e6efec;--muted:#8fa9a6;--line:#27494b;--accent:#f0aa3f;--ok:#6fd49b;--err:#ff8f80;--video:#061213;--ring:#2f5558}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:"Readex Pro",Tahoma,Arial,sans-serif;display:grid;place-items:center;padding:20px;-webkit-user-select:none;user-select:none;background-image:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--accent) 10%,transparent),transparent 60%)}
+.vault{width:100%;max-width:400px;text-align:center}
+.dial{width:210px;height:210px;margin:0 auto 18px;display:block}
+.ring{fill:none;stroke:var(--ring);stroke-width:5;stroke-dasharray:3 6;transform-origin:100px 100px;transition:stroke .5s,transform 1s cubic-bezier(.6,0,.2,1)}
+.ring.now{stroke:var(--accent)}
+.ring.done{stroke:var(--ok);stroke-dasharray:none;transform:rotate(180deg)}
+.lock{fill:none;stroke:var(--ink);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.shackle{transition:transform .5s;transform-origin:100px 92px}
+.open .shackle{transform:translateY(-7px) rotate(-25deg)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px 22px;backdrop-filter:blur(8px)}
+h1{font-size:1.25rem;margin:0 0 4px;font-weight:600}
+.sub{margin:0 0 18px;color:var(--muted);font-size:.9rem}
+.field{position:relative}
+input{width:100%;font:inherit;font-size:1.25rem;letter-spacing:.35em;text-align:center;padding:14px;border-radius:11px;border:1.5px solid var(--line);background:transparent;color:var(--ink);-webkit-user-select:text;user-select:text;direction:ltr}
+input::placeholder{letter-spacing:.2em;color:var(--muted)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input:disabled{opacity:.5}
+button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:11px;padding:14px;background:var(--accent);color:#fff;width:100%;margin-top:12px}
+:root[data-theme="dark"] button{color:#1a1204}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button{color:#1a1204}}
+button:disabled{opacity:.5;cursor:not-allowed}
+.msg{min-height:1.5em;margin-top:12px;font-size:.88rem;color:var(--err)}
+.tries{display:flex;gap:6px;justify-content:center;margin-top:4px}
+.tries i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.tries i.used{background:var(--err)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}.ring,.shackle{transition:none}}
+#player{display:none;width:100%;max-width:880px}
+.stage{position:relative;aspect-ratio:16/9;background:var(--video);border-radius:12px;overflow:hidden;display:grid;place-items:center;color:#cfe3de}
+.stage video{width:100%;height:100%;object-fit:contain;display:block}
+.ph{text-align:center;padding:20px;line-height:1.9;font-size:.95rem}
+.wm{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.wm span{position:absolute;white-space:nowrap;color:rgba(255,255,255,.2);font-size:.95rem;direction:ltr;transform:rotate(-18deg)}
+.cover{position:absolute;inset:0;background:#000;color:#fff;display:none;place-items:center;text-align:center;padding:20px;z-index:5}
+.stage.hidden .cover{display:grid}
+</style>
+</head>
+<body>
+
+<main class="vault" id="gate">
+  <svg class="dial" id="dial" viewBox="0 0 200 200" aria-hidden="true">
+    <circle class="ring now" id="r1" cx="100" cy="100" r="92"/>
+    <circle class="ring" id="r2" cx="100" cy="100" r="74"/>
+    <circle class="ring" id="r3" cx="100" cy="100" r="56"/>
+    <rect class="lock" x="80" y="94" width="40" height="30" rx="6"/>
+    <path class="lock shackle" d="M88 94V84a12 12 0 0 1 24 0v10"/>
+    <circle cx="100" cy="109" r="3" fill="var(--ink)"/>
+  </svg>
+  <form class="panel" id="f" autocomplete="off" onsubmit="return false">
+    <h1 id="title">الباب 1 من 3</h1>
+    <p class="sub" id="sub">اكتب الباسورد الأول</p>
+    <div class="field"><input type="password" id="pw" autocomplete="off" placeholder="••••••" aria-label="الباسورد" required></div>
+    <button type="submit" id="go">فتح</button>
+    <div class="msg" id="msg" role="alert"></div>
+    <div class="tries" id="tries" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  </form>
+</main>
+
+<section id="player">
+  <div class="stage" id="stage">
+    <div class="ph" id="ph">لسه مفيش فيديو.<br>حط رابط الفيديو في المتغير VIDEO_SRC جوه الكود.</div>
+    <video id="vid" controls controlsList="nodownload noremoteplayback" disablePictureInPicture playsinline hidden></video>
+    <div class="wm" id="wm" aria-hidden="true"></div>
+    <div class="cover" id="cover">تم إيقاف الفيديو. ارجع للصفحة علشان تكمل.</div>
+  </div>
+</section>
+
+<script>
+/* ================== الإعدادات: عدّل من هنا ================== */
+var PASSWORDS = ["ahmed", "3/10", "9pm"]; // الباسورد الأول والتاني والتالت
+var VIDEO_SRC = "v1.mp4";                                 // رابط الفيديو أو اسم الملف، مثال: "video.mp4"
+var WATERMARK = "اسم المشاهد";                      // النص اللي يظهر فوق الفيديو
+var MAX_TRIES = 5;                                  // عدد المحاولات الغلط قبل القفل
+var LOCK_SECONDS = 30;                              // مدة القفل بالثواني (بتتضاعف كل مرة)
+/* =========================================================== */
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var i=0,fails=0,lockLevel=0,locked=false;
+  var pw=$("pw"),msg=$("msg"),go=$("go"),gate=$("f");
+  var names=["الأول","التاني","التالت"];
+  var dots=$("tries").children;
+
+  $("f").addEventListener("submit",function(){
+    if(locked)return;
+    if(pw.value===PASSWORDS[i]){
+      var r=$("r"+(i+1)); r.setAttribute("class","ring done");
+      i++; pw.value=""; msg.textContent=""; fails=0; paint();
+      if(i===3){ $("dial").classList.add("open"); setTimeout(unlock,1300); lockUI(true); return; }
+      $("r"+(i+1)).setAttribute("class","ring now");
+      $("title").textContent="الباب "+(i+1)+" من 3";
+      $("sub").textContent="اكتب الباسورد "+names[i];
+      pw.focus();
+    }else{
+      fails++; paint(); pw.value="";
+      gate.classList.remove("shake"); void gate.offsetWidth; gate.classList.add("shake");
+      if(fails>=MAX_TRIES){ startLock(); }
+      else msg.textContent="الباسورد غلط. باقي "+(MAX_TRIES-fails)+" محاولات.";
+    }
+  });
+
+  function paint(){ for(var k=0;k<dots.length;k++) dots[k].className=k<fails?"used":""; }
+  function lockUI(on){ pw.disabled=on; go.disabled=on; }
+
+  function startLock(){
+    locked=true; lockUI(true);
+    var s=LOCK_SECONDS*Math.pow(2,lockLevel++);
+    (function tick(){
+      if(s<=0){ locked=false; fails=0; paint(); lockUI(false); msg.textContent=""; pw.focus(); return; }
+      msg.textContent="محاولات كتير. استنى "+s+" ثانية.";
+      s--; setTimeout(tick,1000);
+    })();
+  }
+
+  function unlock(){
+    $("gate").style.display="none"; $("player").style.display="block";
+    buildWatermark(WATERMARK);
+    var v=$("vid");
+    if(VIDEO_SRC){ v.src=VIDEO_SRC; v.hidden=false; $("ph").style.display="none"; }
+    guard();
+  }
+
+  function buildWatermark(t){
+    var h="";
+    for(var y=0;y<7;y++)for(var x=0;x<4;x++)
+      h+='<span style="top:'+(y*16-4)+'%;left:'+(x*28-6+(y%2)*12)+'%">'+t.replace(/[<>&]/g,"")+'</span>';
+    $("wm").innerHTML=h;
+  }
+
+  function guard(){
+    var st=$("stage"),v=$("vid");
+    function hide(){ st.classList.add("hidden"); if(!v.hidden)v.pause(); }
+    function show(){ st.classList.remove("hidden"); }
+    document.addEventListener("visibilitychange",function(){document.hidden?hide():show()});
+    window.addEventListener("blur",hide);
+    window.addEventListener("focus",show);
+    document.addEventListener("contextmenu",function(e){e.preventDefault()});
+    document.addEventListener("keydown",function(e){
+      var k=(e.key||"").toLowerCase();
+      if(k==="printscreen"||(e.ctrlKey&&(k==="s"||k==="p"||k==="u"))||k==="f12"||(e.metaKey&&e.shiftKey)){
+        e.preventDefault(); hide();
+        try{navigator.clipboard.writeText("")}catch(_){}
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
